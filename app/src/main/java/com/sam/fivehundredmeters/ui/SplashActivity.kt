@@ -30,13 +30,9 @@ class SplashActivity : AppCompatActivity() {
                 if (locationUtils.checkPermissions()) {
 
                     Handler().postDelayed({
-                        val animationDuration = animation_view.duration
-                        val t = animationDuration
                         intent = Intent(applicationContext, MainActivity::class.java)
                         startActivity(intent)
-
-
-                    }, animation_view.duration*10)
+                    }, animation_view.duration)
 
                 }
 

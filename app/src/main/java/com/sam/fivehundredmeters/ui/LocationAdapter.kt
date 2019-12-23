@@ -11,7 +11,7 @@ import com.sam.fivehundredmeters.models.location.Item
 import com.sam.fivehundredmeters.models.location.Venue
 
 
-class LocationAdapter(var dataList: List<Venue>) :
+class LocationAdapter(var dataList: ArrayList<Venue>) :
     RecyclerView.Adapter<LocationAdapter.ViewHolder>() {
 
     override fun getItemCount(): Int {
@@ -34,8 +34,28 @@ class LocationAdapter(var dataList: List<Venue>) :
     }
 
     fun updatelist(list: List<Venue>) {
-        dataList = list
+
+        dataList.clear()
+        dataList.addAll(list)
         notifyDataSetChanged()
+
+    }
+
+    fun updateElement(venue: Venue?) {
+        dataList.forEach {
+            it.id == venue?.id
+        }
+
+        for (i in 0..dataList.size) {
+            val tempVenue = dataList.get(i)
+            if (tempVenue.id == venue?.id) {
+                dataList.removeAt(i)
+                dataList.add(i, venue)
+                notifyItemChanged(i)
+                break
+            }
+        }
+
     }
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
