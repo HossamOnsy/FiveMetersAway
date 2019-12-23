@@ -46,13 +46,25 @@ class MainActivity : AppCompatActivity() {
 
     private fun setObservers() {
         mainViewModel.exception.observe(this, Observer { ExpMessage ->
-            mainProgressBar.visibility = View.GONE
             Toast.makeText(this, ExpMessage, Toast.LENGTH_SHORT).show()
         })
 
         mainViewModel.resultMLD.observe(this, Observer { listOfVenues ->
-            mainProgressBar.visibility = View.GONE
             locationAdapter.updatelist(listOfVenues)
+        })
+
+        mainViewModel.listOfVenuesWithPhotosMLD.observe(this, Observer { listOfVenues ->
+            locationAdapter.updatelist(listOfVenues)
+        })
+
+        mainViewModel.photoOfVenueFetched.observe(this, Observer { venue ->
+            locationAdapter.updateElement(venue)
+        })
+
+
+
+        mainViewModel.loading.observe(this, Observer { visibility ->
+            mainProgressBar.visibility = visibility
         })
 
         mainViewModel.getLastLocation(this)

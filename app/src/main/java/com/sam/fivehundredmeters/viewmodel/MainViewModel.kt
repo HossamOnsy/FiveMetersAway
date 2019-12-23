@@ -14,8 +14,8 @@ import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.LatLng
 import com.sam.fivehundredmeters.BuildConfig
 import com.sam.fivehundredmeters.MyApplication.Companion.appContext
-import com.sam.fivehundredmeters.models.location.NearByLocationResponse
 import com.sam.fivehundredmeters.models.location.Venue
+import com.sam.fivehundredmeters.models.photo.PhotoItem
 import com.sam.fivehundredmeters.network.LocationRepo
 import com.sam.fivehundredmeters.utils.LocationUtils
 import com.sam.fivehundredmeters.utils.SharedPrefUtils.getLatLong
@@ -23,14 +23,17 @@ import com.sam.fivehundredmeters.utils.SharedPrefUtils.setLatLong
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
+import io.reactivex.functions.BiFunction
+import io.reactivex.functions.Function
 import io.reactivex.schedulers.Schedulers
-import kotlinx.android.synthetic.main.activity_main.*
 
 
 class MainViewModel(private val locationRepo: LocationRepo) : ViewModel() {
     val resultMLD = MutableLiveData<List<Venue>>()
-    var listOfVenuesMLD = mutableListOf<Venue>()
+    var listOfVenuesWithPhotosMLD = MutableLiveData<List<Venue>>()
+    var photoOfVenueFetched = MutableLiveData<Venue>()
     val exception = MutableLiveData<String>()
+    val loading = MutableLiveData<Int>()
     var disposable: Disposable? = null
     private val locationUtils: LocationUtils = LocationUtils()
     var mFusedLocationClient: FusedLocationProviderClient =
@@ -60,11 +63,11 @@ class MainViewModel(private val locationRepo: LocationRepo) : ViewModel() {
         }
     }
 
-    fun startUpdating(){
+    fun startUpdating() {
         requestNewLocationData()
     }
 
-    fun stopUpdating(){
+    fun stopUpdating() {
         mFusedLocationClient.removeLocationUpdates(mLocationCallback)
     }
 
@@ -75,14 +78,17 @@ class MainViewModel(private val locationRepo: LocationRepo) : ViewModel() {
         )
 
         disposable =
-            locationRepo.getVenues(BuildConfig.CLIENTID, BuildConfig.CLIENTSECRET, latlongformat)
+            locationRepo.getLocations(BuildConfig.CLIENTID, BuildConfig.CLIENTSECRET, latlongformat)
                 ?.subscribeOn(Schedulers.io())
                 ?.observeOn(AndroidSchedulers.mainThread())
+                ?.doOnSubscribe { loading.value = View.VISIBLE }
+                ?.doOnComplete { loading.value = View.GONE }
                 ?.subscribe(
                     { result ->
 
                         resultMLD.value = result
-                        listOfVenuesMLD = result
+                        goCheckPhotos(result)
+//                        listOfVenuesMLD = result
                         Log.v("Near me", "" + result)
 //                        this@MainViewModel.result.value = result
                     },
@@ -93,41 +99,49 @@ class MainViewModel(private val locationRepo: LocationRepo) : ViewModel() {
                 )
     }
 
-//    fun getUsersWithTheirTweets(): Observable<List<User>?>? {
-//        val usersObs: Observable<User> =
-//            briteDb.createQuery("user", "SELECT * FROM user")
-//                .map(object : Func1<SqlBrite.Query?, List<User?>?>() {
-//                    fun call(query: SqlBrite.Query): List<User>? {
-//                        val cursor: Cursor = query.run()
-//                        val result: MutableList<User> =
-//                            ArrayList(cursor.getCount())
-//                        while (cursor.moveToNext()) {
-//                            val user: User = UserTable.parseCursor(cursor)
-//                            result.add(user)
-//                        }
-//                        cursor.close()
-//                        return result
-//                    }
-//                }) // transform Observable<List<User>> into Observable<User>
-//                .flatMap(object :
-//                    Func1<List<User?>?, Observable<User?>?>() {
-//                    fun call(users: List<User?>?): Observable<User?>? {
-//                        return Observable.from(users)
-//                    }
-//                })
-//    return Observable.zip(usersObs, usersObs.flatMap(new Func1<User, Observable<List<Tweet>>>() {
-//        @Override
-//        public Observable<List<Tweet>> call(User user) {
-//            return tweetDao.getTweetsByUser(user);
-//        }
-//    }), new Func2<User, List<Tweet>, User>() {
-//        @Override
-//        public User call(User user, List<Tweet> tweets) {
-//            user.tweets = tweets;
-//            return user;
-//        }
-//    }).toList();
-//    }
+    private fun goCheckPhotos(listOfVenueObs: List<Venue>) {
+
+        listOfVenueObs.forEach {
+            val venueObs = Observable.just(it)
+            val venue =
+                Observable.zip(venueObs, venueObs.flatMap(object :
+                    Function<Venue, Observable<List<PhotoItem>>> {
+                    override fun apply(t: Venue): Observable<List<PhotoItem>>? {
+                        return locationRepo.getPhotos(
+                            t.id,
+                            BuildConfig.CLIENTID,
+                            BuildConfig.CLIENTSECRET
+                        )
+                    }
+                }), object : BiFunction<Venue, List<PhotoItem>, Venue> {
+                    override fun apply(t1: Venue, t2: List<PhotoItem>): Venue {
+                        if (t2.size > 0)
+                            t1.imageUrl = t2.get(0).prefix + "1920x1080" + t2.get(0).suffix
+                        return t1
+                    }
+
+                }
+                )
+            venue
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnSubscribe { loading.value = View.VISIBLE }
+                .doFinally {
+                    loading.value = View.GONE
+
+                }
+                .subscribe(
+                    { result ->
+                        photoOfVenueFetched.value = result
+                        Log.v("Near me", "" + result)
+                    },
+                    { error ->
+                        Log.e("ERROR", error.message)
+                        exception.value = error.toString()
+                    }
+                )
+        }
+    }
 
 
     private fun requestNewLocationData() {
@@ -143,7 +157,6 @@ class MainViewModel(private val locationRepo: LocationRepo) : ViewModel() {
     }
 
 
-
     private val mLocationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
             val mLastLocation: Location = locationResult.lastLocation
@@ -155,9 +168,6 @@ class MainViewModel(private val locationRepo: LocationRepo) : ViewModel() {
                 mLastLocation.longitude
             )
             Log.v("mLocationCallback", "Entered onLocationResult")
-
-//            val toast = Toast.makeText(appContext, distance.toString(), Toast.LENGTH_SHORT)
-//            toast.show()
 
             if (distance >= 500.0) {
                 setLatLong(LatLng(mLastLocation.latitude, mLastLocation.longitude))
