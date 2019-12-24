@@ -32,6 +32,7 @@ class SplashActivity : AppCompatActivity() {
                     Handler().postDelayed({
                         intent = Intent(applicationContext, MainActivity::class.java)
                         startActivity(intent)
+                        finish()
                     }, animation_view.duration)
 
                 }
