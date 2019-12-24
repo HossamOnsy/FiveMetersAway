@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">FiveHundredMeters</string>
+    <string name="cafe_masters_rest_house">cafe masters rest house</string>
+    <string name="the_coffee_bean">The coffee bean</string>
 </resources>

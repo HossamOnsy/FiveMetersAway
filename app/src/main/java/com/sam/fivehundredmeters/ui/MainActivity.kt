@@ -1,7 +1,6 @@
 package com.sam.fivehundredmeters.ui
 
 import android.os.Bundle
-import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
@@ -23,6 +22,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        setSupportActionBar(toolbar)
 
         initiateRecyclerView()
         initMode()
@@ -60,7 +60,6 @@ class MainActivity : AppCompatActivity() {
         mainViewModel.photoOfVenueFetched.observe(this, Observer { venue ->
             locationAdapter.updateElement(venue)
         })
-
 
 
         mainViewModel.loading.observe(this, Observer { visibility ->
