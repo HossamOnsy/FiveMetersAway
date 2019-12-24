@@ -14,6 +14,7 @@ import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.LatLng
 import com.sam.fivehundredmeters.BuildConfig
 import com.sam.fivehundredmeters.MyApplication.Companion.appContext
+import com.sam.fivehundredmeters.models.enum.SizeOfPhotos
 import com.sam.fivehundredmeters.models.location.Venue
 import com.sam.fivehundredmeters.models.photo.PhotoItem
 import com.sam.fivehundredmeters.network.LocationRepo
@@ -88,12 +89,8 @@ class MainViewModel(private val locationRepo: LocationRepo) : ViewModel() {
 
                         resultMLD.value = result
                         goCheckPhotos(result)
-//                        listOfVenuesMLD = result
-                        Log.v("Near me", "" + result)
-//                        this@MainViewModel.result.value = result
                     },
                     { error ->
-                        Log.e("ERROR", error.message)
                         exception.value = error.toString()
                     }
                 )
@@ -104,23 +101,18 @@ class MainViewModel(private val locationRepo: LocationRepo) : ViewModel() {
         listOfVenueObs.forEach {
             val venueObs = Observable.just(it)
             val venue =
-                Observable.zip(venueObs, venueObs.flatMap(object :
-                    Function<Venue, Observable<List<PhotoItem>>> {
-                    override fun apply(t: Venue): Observable<List<PhotoItem>>? {
-                        return locationRepo.getPhotos(
-                            t.id,
-                            BuildConfig.CLIENTID,
-                            BuildConfig.CLIENTSECRET
-                        )
-                    }
-                }), object : BiFunction<Venue, List<PhotoItem>, Venue> {
-                    override fun apply(t1: Venue, t2: List<PhotoItem>): Venue {
+                Observable.zip(venueObs, venueObs.flatMap { t ->
+                    locationRepo.getPhotos(
+                        t.id,
+                        BuildConfig.CLIENTID,
+                        BuildConfig.CLIENTSECRET
+                    )
+                },
+                    BiFunction<Venue, List<PhotoItem>, Venue> { t1, t2 ->
                         if (t2.size > 0)
-                            t1.imageUrl = t2.get(0).prefix + "1920x1080" + t2.get(0).suffix
-                        return t1
+                            t1.imageUrl = t2.get(0).prefix + SizeOfPhotos.REALLYSMALL.value + t2.get(0).suffix
+                        t1
                     }
-
-                }
                 )
             venue
                 .subscribeOn(Schedulers.io())
@@ -133,10 +125,8 @@ class MainViewModel(private val locationRepo: LocationRepo) : ViewModel() {
                 .subscribe(
                     { result ->
                         photoOfVenueFetched.value = result
-                        Log.v("Near me", "" + result)
                     },
                     { error ->
-                        Log.e("ERROR", error.message)
                         exception.value = error.toString()
                     }
                 )
@@ -167,8 +157,6 @@ class MainViewModel(private val locationRepo: LocationRepo) : ViewModel() {
                 mLastLocation.latitude,
                 mLastLocation.longitude
             )
-            Log.v("mLocationCallback", "Entered onLocationResult")
-
             if (distance >= 500.0) {
                 setLatLong(LatLng(mLastLocation.latitude, mLastLocation.longitude))
                 initiateGetLocations(LatLng(mLastLocation.latitude, mLastLocation.longitude))
