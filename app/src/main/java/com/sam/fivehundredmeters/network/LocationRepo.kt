@@ -62,7 +62,7 @@ class LocationRepo(private val locationApi: LocationApi) {
                 val venue = Observable.zip(venueObs, venueObs.flatMap(object :
                     Function<Venue, Observable<List<PhotoItem>>> {
                     override fun apply(t: Venue): Observable<List<PhotoItem>>? {
-                        return getPhotos(t.id, client_id, client_secret)
+                        return getPhotos(t.id!!, client_id, client_secret)
                     }
                 }), object : BiFunction<Venue, List<PhotoItem>, Venue> {
                     override fun apply(t1: Venue, t2: List<PhotoItem>): Venue {

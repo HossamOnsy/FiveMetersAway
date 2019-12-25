@@ -30,22 +30,33 @@ import io.reactivex.schedulers.Schedulers
 
 
 class MainViewModel(private val locationRepo: LocationRepo) : ViewModel() {
-    val resultMLD = MutableLiveData<List<Venue>>()
-    var listOfVenuesWithPhotosMLD = MutableLiveData<List<Venue>>()
+
+    lateinit var resultMLD : MutableLiveData<List<Venue>>
     var photoOfVenueFetched = MutableLiveData<Venue>()
     val exception = MutableLiveData<String>()
     val loading = MutableLiveData<Int>()
+    var mFusedLocationClient: FusedLocationProviderClient? = null
+
+    init{
+        resultMLD = MutableLiveData()
+    }
+    fun initiateFusedLocation(){
+        mFusedLocationClient=
+            LocationServices.getFusedLocationProviderClient(appContext)
+    }
+
     var disposable: Disposable? = null
+
     private val locationUtils: LocationUtils = LocationUtils()
-    var mFusedLocationClient: FusedLocationProviderClient =
-        LocationServices.getFusedLocationProviderClient(appContext)
+
+
 
 
     fun getLastLocation(context: Context) {
         if (locationUtils.checkPermissions()) {
             if (locationUtils.isLocationEnabled()) {
 
-                mFusedLocationClient.lastLocation.addOnCompleteListener(context as Activity) { task ->
+                mFusedLocationClient?.lastLocation?.addOnCompleteListener(context as Activity) { task ->
                     val location: Location? = task.result
                     if (location == null) {
                         requestNewLocationData()
@@ -69,10 +80,10 @@ class MainViewModel(private val locationRepo: LocationRepo) : ViewModel() {
     }
 
     fun stopUpdating() {
-        mFusedLocationClient.removeLocationUpdates(mLocationCallback)
+        mFusedLocationClient?.removeLocationUpdates(mLocationCallback)
     }
 
-    private fun initiateGetLocations(latLng: LatLng) {
+    fun initiateGetLocations(latLng: LatLng) {
         val latlongformat = String.format(
             "%s,%s", latLng.latitude
                 .toString(), latLng.longitude
@@ -103,7 +114,7 @@ class MainViewModel(private val locationRepo: LocationRepo) : ViewModel() {
             val venue =
                 Observable.zip(venueObs, venueObs.flatMap { t ->
                     locationRepo.getPhotos(
-                        t.id,
+                        t.id!!,
                         BuildConfig.CLIENTID,
                         BuildConfig.CLIENTSECRET
                     )
@@ -140,7 +151,7 @@ class MainViewModel(private val locationRepo: LocationRepo) : ViewModel() {
         mLocationRequest.interval = 2000
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(appContext)
-        mFusedLocationClient.requestLocationUpdates(
+        mFusedLocationClient?.requestLocationUpdates(
             mLocationRequest, mLocationCallback,
             Looper.myLooper()
         )
