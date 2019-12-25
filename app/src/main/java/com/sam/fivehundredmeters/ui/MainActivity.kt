@@ -15,7 +15,7 @@ import org.koin.android.ext.android.inject
 
 
 class MainActivity : AppCompatActivity() {
-    private val mainViewModel: MainViewModel by inject()
+    val mainViewModel: MainViewModel by inject()
 
     private lateinit var locationAdapter: LocationAdapter
 
@@ -24,11 +24,17 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
 
-        initiateRecyclerView()
-        initMode()
         setObservers()
         setClickListeners()
 
+        initiateRecyclerView()
+        initMode()
+        initiateCall()
+    }
+
+    fun initiateCall() {
+        mainViewModel.initiateFusedLocation()
+        mainViewModel.getLastLocation(this)
     }
 
     private fun initiateRecyclerView() {
@@ -53,10 +59,6 @@ class MainActivity : AppCompatActivity() {
             locationAdapter.updatelist(listOfVenues)
         })
 
-        mainViewModel.listOfVenuesWithPhotosMLD.observe(this, Observer { listOfVenues ->
-            locationAdapter.updatelist(listOfVenues)
-        })
-
         mainViewModel.photoOfVenueFetched.observe(this, Observer { venue ->
             locationAdapter.updateElement(venue)
         })
@@ -66,7 +68,6 @@ class MainActivity : AppCompatActivity() {
             mainProgressBar.visibility = visibility
         })
 
-        mainViewModel.getLastLocation(this)
     }
 
     fun setClickListeners() {
